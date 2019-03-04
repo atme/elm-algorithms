@@ -1,0 +1,47 @@
+body {
+    background-color: #ff715b;
+    box-sizing: border-box;
+}
+
+.algorithm {
+    background-color: #fff;
+    color: #4c5454;
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+    padding: 20px;
+    border-radius: 5px;
+    -webkit-box-shadow: 0 4px 2px -2px #4c5454;
+	   -moz-box-shadow: 0 4px 2px -2px #4c5454; 
+            box-shadow: 0 4px 2px -2px #4c5454;
+    margin: 24px auto;
+    width: 50rem;
+}
+
+.squares {
+    display: flex;
+}
+
+.square {
+    border: 1px #4c5454 solid;
+    padding: 10px;
+    min-width: 20px;
+    text-align: center;
+    margin-right: -1px;
+}
+
+.current {
+    background-color: #eae0cc;
+}
+
+.found {
+    background-color: #1ea896;
+}
+
+h1 {
+    font-weight: 100;
+    margin-top: 0;
+}
+
+h2 {
+    display: inline;
+    font-weight: 100;
+}
