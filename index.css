@@ -1,19 +1,16 @@
 body {
-    background-color: #ff715b;
+    background-color: #297CBB;
     box-sizing: border-box;
+    background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAU0lEQVQIHQXBwRGDIBAAwO2/AMcCDHAcPjIRxjJ8Je1kl1uqUgphsWu6w0sIG6npLpcUBql4e/wsVRKabrkNTacIYbMrwsF06rqUhsnXVKVT+Hj+Ue4rPSONk4kAAAAASUVORK5CYII=);
 }
 
 .algorithm {
-    background-color: #fff;
-    color: #4c5454;
+    background-color: #f4fbfe;
+    color: #2c3643;
     font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
-    padding: 20px;
-    border-radius: 5px;
-    -webkit-box-shadow: 0 4px 2px -2px #4c5454;
-	   -moz-box-shadow: 0 4px 2px -2px #4c5454; 
-            box-shadow: 0 4px 2px -2px #4c5454;
+    padding: 15px;
     margin: 24px auto;
-    width: 50rem;
+    width: 30rem;
 }
 
 .squares {
@@ -21,7 +18,7 @@ body {
 }
 
 .square {
-    border: 1px #4c5454 solid;
+    border: 1px #2c3643 solid;
     padding: 10px;
     min-width: 20px;
     text-align: center;
@@ -29,19 +26,29 @@ body {
 }
 
 .current {
-    background-color: #eae0cc;
+    background-color: rgb(113, 154, 185);
 }
 
 .found {
-    background-color: #1ea896;
+    background-color: #297CBB;
 }
 
 h1 {
     font-weight: 100;
-    margin-top: 0;
+    margin: 0 0 15px 0;
 }
 
 h2 {
-    display: inline;
     font-weight: 100;
+    margin: 15px 0;
+}
+
+button {
+    background-color: #3b444f;
+    color: #f4fbfe;
+    height: 40px;
+    width: 100px;
+    border: 0 solid #2c3643;
+    margin-right: 5px;
+    cursor: pointer;
 }
