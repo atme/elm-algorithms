@@ -8,10 +8,14 @@
 </head>
 
 <body>
-  <div id="linearsearch"></div>
+  <div id="linearSearch"></div>
+  <div id="binarySearch"></div>
   <script>
-  var app = Elm.Main.init({
-    node: document.getElementById('linearsearch')
+  var linearSearch = Elm.LinearSearch.init({
+    node: document.getElementById('linearSearch')
+  });
+  var binarySearch = Elm.BinarySearch.init({
+    node: document.getElementById('binarySearch')
   });
   </script>
 </body>

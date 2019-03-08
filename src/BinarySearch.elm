@@ -1,4 +1,4 @@
-module LinearSearch exposing (main)
+module BinarySearch exposing (main)
 
 import Browser
 import Html exposing (Html, div, text, h1, button, h2)
@@ -32,7 +32,7 @@ lookingForGenerator = Random.int 0 9
 
 type Status
     = Idle
-    | Running Int
+    | Running Int Int Int
     | Found Int
     | NotFound
     | Error
@@ -73,14 +73,19 @@ update msg model =
             )
 
         Run ->
-            ( { model | status = Running 0 }
+            let
+                length =
+                    Array.length model.array - 1
+            in
+            ( { model | status = Running 0 0 length }
             , Cmd.none
             )
 
-        NextStep newTime ->
+        NextStep _ ->
             case model.status of
-                Running index ->
-                    updateRunningModel index model
+                Running index last length ->
+                    updateRunningModel index last length model
+
                 _ -> 
                     ( { model | status = Error }
                     , Cmd.none
@@ -97,24 +102,35 @@ update msg model =
                     ( { model | lookingFor = value }
                     , Cmd.none
                     )
+
                 Nothing ->
                     ( { model | status = Error }
                     , Cmd.none
                     )
 
 
-updateRunningModel : Int -> Model -> (Model, Cmd Msg)
-updateRunningModel index model =
+updateRunningModel : Int -> Int -> Int -> Model -> (Model, Cmd Msg)
+updateRunningModel index last length model =
     case Array.get index model.array of
         Just value ->
             let
-                status i =
+                newIndexForward =
+                    ceiling <| toFloat (length + index) / 2
+
+                newIndexBackward =
+                    (index - last) // 2 + last
+
+                status =
                     if value == model.lookingFor then
-                        Found i
+                        Found index
+
+                    else if value < model.lookingFor then
+                        Running newIndexForward index length
+
                     else
-                        Running (i + 1)
+                        Running newIndexBackward last index
             in
-            ( { model | status = status index }
+            ( { model | status = status }
             , Cmd.none
             )
 
@@ -131,7 +147,7 @@ updateRunningModel index model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.status of
-        Running current ->
+        Running _ _ _ ->
             Time.every 1000 NextStep
         _ ->
             Sub.none
@@ -161,7 +177,7 @@ view model =
                     ""
     in
         div [ class "algorithm" ]
-            [ h1 [] [ text "Linear Search" ]
+            [ h1 [] [ text "Binary Search" ]
             , button [ onClick Run ] [ text "Run" ]
             , button [ onClick Reset ] [ text "Reset" ]
             , h2 [] [ text (lookingForText ++ foundText) ]
@@ -183,7 +199,7 @@ viewSquare model index value =
     let
         additionalClass =
             case model.status of
-                Running current ->
+                Running current _ _ ->
                     hasAdditionalClass current "current"
 
                 Found found ->
