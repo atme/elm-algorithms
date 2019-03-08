@@ -5,7 +5,6 @@ import Html exposing (Html, div, text, h1, button, h2)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Random
-import Array exposing (Array)
 import Time
 
 
@@ -18,8 +17,8 @@ main =
         }
 
 
-arrayGenerator : Random.Generator (List Int)
-arrayGenerator = Random.list 10 (Random.int 10 99)
+listGenerator : Random.Generator (List Int)
+listGenerator = Random.list 10 (Random.int 10 99)
 
 
 lookingForGenerator : Random.Generator Int
@@ -29,27 +28,38 @@ lookingForGenerator = Random.int 0 9
 
 --MODEL
 
-
-type Status
-    = Idle
-    | Running Int
-    | Found Int
-    | NotFound
-    | Error
-
-
+{- This type of the model guarantier us,
+   that the model cannot reach an impossible state.
+-}
 type alias Model =
-    { array : Array Int
-    , lookingFor : Int
+    { previous : List Int
     , status : Status
+    , others : List Int
     }
 
 
-init : () -> (Model, Cmd Msg)
-init _ = 
-    ( Model Array.empty 0 Idle
-    , Random.generate NewArray arrayGenerator
+type Status
+    = Idle Int
+    | Running RunningAlias
+    | Found Int
+
+
+type alias RunningAlias = 
+    { current: Int
+    , remaining: List Int
+    , lookingFor: Int
+    }
+
+
+resetModel : (Model, Cmd Msg)
+resetModel =
+    ( Model [] (Idle 0) []
+    , Random.generate NewList listGenerator
     )
+
+
+init : () -> (Model, Cmd Msg)
+init _ = resetModel
 
 
 
@@ -59,69 +69,131 @@ init _ =
 type Msg 
     = Reset
     | Run
-    | NextStep Time.Posix
-    | NewArray (List Int)
-    | NewLookingFor Int
+    | NextStep RunningAlias Time.Posix
+    | NewList (List Int)
+    | NewLookingFor (List Int) Int
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         Reset ->
-            ( { model | status = Idle }
-            , Random.generate NewArray arrayGenerator
-            )
+            resetModel
 
         Run ->
-            ( { model | status = Running 0 }
-            , Cmd.none
-            )
-
-        NextStep newTime ->
             case model.status of
-                Running index ->
-                    updateRunningModel index model
-                _ -> 
-                    ( { model | status = Error }
+                Idle lookingFor ->
+                    let
+                        current =
+                            List.head model.previous
+                        remaining =
+                            List.drop 1 model.previous
+                    in
+                    (
+                        { model
+                        | previous = []
+                        , status = runOrFound current remaining lookingFor
+                        }
                     , Cmd.none
                     )
 
-        NewArray list ->
-            ( { model | array = Array.fromList (List.sort list) }
-            , Random.generate NewLookingFor lookingForGenerator
-            )
-
-        NewLookingFor index ->
-            case Array.get index model.array of
-                Just value ->
-                    ( { model | lookingFor = value }
+                Running data ->
+                    let
+                        previous 
+                            = model.previous
+                            ++ (data.current :: [])
+                            ++ data.remaining
+                        current =
+                            List.head previous
+                        remaining =
+                            List.drop 1 previous
+                    in
+                    (
+                        { model
+                        | previous = []
+                        , status = runOrFound current remaining data.lookingFor
+                        }
                     , Cmd.none
                     )
-                Nothing ->
-                    ( { model | status = Error }
+
+                Found found ->
+                    let
+                        current =
+                            List.head model.previous
+                        remaining =
+                            List.drop 1 model.previous
+                    in
+                    (
+                        { model
+                        | previous = []
+                        , status = runOrFound current remaining found
+                        }
                     , Cmd.none
                     )
 
-
-updateRunningModel : Int -> Model -> (Model, Cmd Msg)
-updateRunningModel index model =
-    case Array.get index model.array of
-        Just value ->
+        NextStep data newTime ->
             let
-                status i =
-                    if value == model.lookingFor then
-                        Found i
-                    else
-                        Running (i + 1)
+                previous =
+                    model.previous ++ (data.current :: [])
+                current =
+                    List.head data.remaining
+                remaining =
+                    List.drop 1 data.remaining
             in
-            ( { model | status = status index }
+            (
+                { model
+                | previous = previous
+                , status = runOrFound current remaining data.lookingFor
+                }
             , Cmd.none
             )
+
+        NewList list ->
+            let
+                sortedList =
+                    List.sort list
+                lookingFor =
+                    Maybe.withDefault 10 (List.head sortedList)
+            in
+            ( Model [] (Idle lookingFor) (List.drop 1 sortedList)
+            , Random.generate (NewLookingFor sortedList) lookingForGenerator
+            )
+
+        NewLookingFor list index ->
+            if index == 0 then
+                ( model
+                , Cmd.none
+                )
+            else
+                let
+                    previous =
+                        List.take (index - 1) list
+                    lookingFor =
+                        list
+                            |> List.take index
+                            |> List.reverse
+                            |> List.head
+                            |> Maybe.withDefault 10
+                    others =
+                        List.drop index list
+                in
+                ( Model previous (Idle lookingFor) others
+                , Cmd.none
+                )
+
+
+runOrFound : Maybe Int -> List Int -> Int -> Status
+runOrFound current remaining lookingFor =
+    case current of
+        Just number ->
+            Running
+                { current = number
+                , remaining = remaining
+                , lookingFor = lookingFor
+                }
 
         Nothing ->
-            ( { model | status = NotFound }
-            , Cmd.none
-            )
+            Found lookingFor
 
 
 
@@ -131,8 +203,8 @@ updateRunningModel index model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.status of
-        Running current ->
-            Time.every 1000 NextStep
+        Running data ->
+            Time.every 1000 (NextStep data)
         _ ->
             Sub.none
 
@@ -146,58 +218,70 @@ view model =
     let
         lookingForText =
             case model.status of
-                Error ->
-                    "We got some error here :("
-                _ ->
-                    "We are looking for: " ++ String.fromInt model.lookingFor
+                Idle lookingFor ->
+                    String.fromInt lookingFor
+                Running data ->
+                    String.fromInt data.lookingFor
+                Found found ->
+                    String.fromInt found
 
         foundText =
             case model.status of
-                Found index ->
-                    " | The index: " ++ String.fromInt index
-                NotFound ->
-                    " | Strange, but we've found nothing :o"
+                Found _ ->
+                    String.fromInt (List.length model.previous)
                 _ ->
-                    ""
+                    "Unknown"
     in
         div [ class "algorithm" ]
             [ h1 [] [ text "Linear Search" ]
             , button [ onClick Run ] [ text "Run" ]
             , button [ onClick Reset ] [ text "Reset" ]
-            , h2 [] [ text (lookingForText ++ foundText) ]
+            , h2 [] [ text ("We are looking for: " ++ lookingForText)
+                    , text (" | The index: " ++ foundText)
+                    ]
             , viewSquares model
             ]
 
 
 viewSquares : Model -> Html Msg
-viewSquares model = 
-    div [ class "squares" ]
-        ( model.array
-          |> Array.indexedMap (viewSquare model)
-          |> Array.toList
-        )
-
-
-viewSquare : Model -> Int -> Int -> Html Msg
-viewSquare model index value =
+viewSquares model =
     let
-        additionalClass =
+        squares =
             case model.status of
-                Running current ->
-                    hasAdditionalClass current "current"
+                Idle lookingFor ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.singleton (viewEmptySquare lookingFor)
+                 ++ List.map viewEmptySquare model.others
+
+                Running data ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.singleton (viewCurrentSquare data.current)
+                 ++ List.map viewEmptySquare data.remaining
+                 ++ List.singleton (viewEmptySquare data.lookingFor)
+                 ++ List.map viewEmptySquare model.others
 
                 Found found ->
-                    hasAdditionalClass found "found"
-
-                _ ->
-                    ""
-
-        hasAdditionalClass selectedIndex name =
-            if index == selectedIndex then
-                name
-            else
-                ""
-
-        stringValue = String.fromInt value
+                    List.map viewEmptySquare model.previous
+                 ++ List.singleton (viewFoundSquare found)
+                 ++ List.map viewEmptySquare model.others
     in
-    div [ class "square", class additionalClass ] [ text stringValue ]
+    div [ class "squares" ] squares
+
+
+viewEmptySquare : Int -> Html Msg
+viewEmptySquare number =
+    viewSquare "" (String.fromInt number)
+
+
+viewCurrentSquare : Int -> Html Msg
+viewCurrentSquare number =
+    viewSquare "current" (String.fromInt number)
+
+
+viewFoundSquare : Int -> Html Msg
+viewFoundSquare number =
+    viewSquare "found" (String.fromInt number)
+
+viewSquare : String -> String -> Html Msg
+viewSquare additionalClass value =
+    div [ class "square", class additionalClass ] [ text value ]
