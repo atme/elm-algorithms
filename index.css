@@ -1,20 +1,25 @@
 body {
     background-color: #297CBB;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
     box-sizing: border-box;
-    background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAQAAABuBnYAAAAAU0lEQVQIHQXBwRGDIBAAwO2/AMcCDHAcPjIRxjJ8Je1kl1uqUgphsWu6w0sIG6npLpcUBql4e/wsVRKabrkNTacIYbMrwsF06rqUhsnXVKVT+Hj+Ue4rPSONk4kAAAAASUVORK5CYII=);
+    font-family: 'Roboto', sans-serif;
 }
 
 .algorithm {
     background-color: #f4fbfe;
     color: #2c3643;
-    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
     padding: 15px;
-    margin: 24px auto;
+    margin: 24px 16px;
     width: 30rem;
+    border-radius: 10px;
+    box-shadow: 0 8px 6px -6px black;
 }
 
 .squares {
     display: flex;
+    font-weight: bold;
 }
 
 .square {
@@ -48,7 +53,11 @@ button {
     color: #f4fbfe;
     height: 40px;
     width: 100px;
-    border: 0 solid #2c3643;
+    border: 0 solid #3b444f;
     margin-right: 5px;
     cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: bold;
 }
