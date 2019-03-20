@@ -2,7 +2,7 @@ module LinearSearch exposing (main)
 
 import Browser
 import Html exposing (Html, div, text, h1, button, h2)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onClick)
 import Random
 import Time
@@ -22,38 +22,33 @@ listGenerator = Random.list 10 (Random.int 10 99)
 
 
 lookingForGenerator : Random.Generator Int
-lookingForGenerator = Random.int 0 9
+lookingForGenerator = Random.int 1 10
 
 
 
 --MODEL
 
-{- This type of the model guarantier us,
-   that the model cannot reach an impossible state.
+{-| This type of the model guarantier us,
+    that the model cannot reach an impossible state.
 -}
 type alias Model =
-    { previous : List Int
+    { lookingFor : Int
+    , previous : List Int
     , status : Status
-    , others : List Int
+    , remaining : List Int
     }
 
 
 type Status
-    = Idle Int
-    | Running RunningAlias
+    = Idle
+    | Running Int
     | Found Int
-
-
-type alias RunningAlias = 
-    { current: Int
-    , remaining: List Int
-    , lookingFor: Int
-    }
+    | NotFound
 
 
 resetModel : (Model, Cmd Msg)
 resetModel =
-    ( Model [] (Idle 0) []
+    ( Model 0 [] Idle []
     , Random.generate NewList listGenerator
     )
 
@@ -69,9 +64,9 @@ init _ = resetModel
 type Msg 
     = Reset
     | Run
-    | NextStep RunningAlias Time.Posix
+    | NextStep Int Time.Posix
     | NewList (List Int)
-    | NewLookingFor (List Int) Int
+    | NewLookingFor Int
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -81,119 +76,69 @@ update msg model =
             resetModel
 
         Run ->
-            case model.status of
-                Idle lookingFor ->
-                    let
-                        current =
-                            List.head model.previous
-                        remaining =
-                            List.drop 1 model.previous
-                    in
+            case List.head model.remaining of
+                Just current ->
                     (
                         { model
                         | previous = []
-                        , status = runOrFound current remaining lookingFor
+                        , status = Running current
+                        , remaining = List.drop 1 model.remaining
                         }
-                    , Cmd.none
+                    ,
+                    Cmd.none
                     )
 
-                Running data ->
-                    let
-                        previous 
-                            = model.previous
-                            ++ (data.current :: [])
-                            ++ data.remaining
-                        current =
-                            List.head previous
-                        remaining =
-                            List.drop 1 previous
-                    in
-                    (
-                        { model
-                        | previous = []
-                        , status = runOrFound current remaining data.lookingFor
-                        }
-                    , Cmd.none
-                    )
+                Nothing ->
+                    ( model, Cmd.none )
 
-                Found found ->
-                    let
-                        current =
-                            List.head model.previous
-                        remaining =
-                            List.drop 1 model.previous
-                    in
-                    (
-                        { model
-                        | previous = []
-                        , status = runOrFound current remaining found
-                        }
-                    , Cmd.none
-                    )
+        NextStep current newTime ->
+            if current == model.lookingFor then
+                ( { model | status = Found current }
+                , Cmd.none
+                )
+            else
+                case List.head model.remaining of
+                    Just newCurrent ->
+                        (
+                            { model
+                            | previous = model.previous ++ (current :: [])
+                            , status = Running newCurrent
+                            , remaining = List.drop 1 model.remaining
+                            }
+                        , Cmd.none
+                        )
 
-        NextStep data newTime ->
-            let
-                previous =
-                    model.previous ++ (data.current :: [])
-                current =
-                    List.head data.remaining
-                remaining =
-                    List.drop 1 data.remaining
-            in
-            (
-                { model
-                | previous = previous
-                , status = runOrFound current remaining data.lookingFor
-                }
-            , Cmd.none
-            )
+                    Nothing ->
+                        (
+                            { model
+                            | previous = model.previous ++ (current :: [])
+                            , status = NotFound
+                            }
+                        , Cmd.none
+                        )
+
 
         NewList list ->
             let
                 sortedList =
                     List.sort list
-                lookingFor =
-                    Maybe.withDefault 10 (List.head sortedList)
             in
-            ( Model [] (Idle lookingFor) (List.drop 1 sortedList)
-            , Random.generate (NewLookingFor sortedList) lookingForGenerator
+            ( { model | previous = [], status = Idle, remaining = sortedList }
+            , Random.generate NewLookingFor lookingForGenerator
             )
 
-        NewLookingFor list index ->
-            if index == 0 then
-                ( model
-                , Cmd.none
-                )
-            else
-                let
-                    previous =
-                        List.take (index - 1) list
-                    lookingFor =
-                        list
-                            |> List.take index
-                            |> List.reverse
-                            |> List.head
-                            |> Maybe.withDefault 10
-                    others =
-                        List.drop index list
-                in
-                ( Model previous (Idle lookingFor) others
-                , Cmd.none
-                )
-
-
-runOrFound : Maybe Int -> List Int -> Int -> Status
-runOrFound current remaining lookingFor =
-    case current of
-        Just number ->
-            Running
-                { current = number
-                , remaining = remaining
-                , lookingFor = lookingFor
-                }
-
-        Nothing ->
-            Found lookingFor
+        NewLookingFor index ->
+            let
+                lookingFor =
+                    model.remaining
+                        |> List.take index
+                        |> List.reverse
+                        |> List.head
+                        |> Maybe.withDefault (index * 10)
+            in
+            ( { model | lookingFor = lookingFor }
+            , Cmd.none
+            )
 
 
 
@@ -216,28 +161,25 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     let
-        lookingForText =
-            case model.status of
-                Idle lookingFor ->
-                    String.fromInt lookingFor
-                Running data ->
-                    String.fromInt data.lookingFor
-                Found found ->
-                    String.fromInt found
-
         foundText =
             case model.status of
                 Found _ ->
-                    String.fromInt (List.length model.previous)
+                    " | The index: " ++String.fromInt (List.length model.previous)
+                NotFound ->
+                    "The value is not in the list"
                 _ ->
-                    "Unknown"
+                    ""
     in
         div [ class "algorithm" ]
             [ h1 [] [ text "Linear Search" ]
-            , button [ onClick Run ] [ text "Run" ]
+            , button
+                [ onClick Run
+                , disabled (model.status /= Idle)
+                ]
+                [ text "Run" ]
             , button [ onClick Reset ] [ text "Reset" ]
-            , h2 [] [ text ("We are looking for: " ++ lookingForText)
-                    , text (" | The index: " ++ foundText)
+            , h2 [] [ text ("We are looking for: " ++ String.fromInt model.lookingFor)
+                    , text (foundText)
                     ]
             , viewSquares model
             ]
@@ -248,22 +190,23 @@ viewSquares model =
     let
         squares =
             case model.status of
-                Idle lookingFor ->
+                Idle ->
                     List.map viewEmptySquare model.previous
-                 ++ List.singleton (viewEmptySquare lookingFor)
-                 ++ List.map viewEmptySquare model.others
+                 ++ List.map viewEmptySquare model.remaining
 
-                Running data ->
+                Running current ->
                     List.map viewEmptySquare model.previous
-                 ++ List.singleton (viewCurrentSquare data.current)
-                 ++ List.map viewEmptySquare data.remaining
-                 ++ List.singleton (viewEmptySquare data.lookingFor)
-                 ++ List.map viewEmptySquare model.others
+                 ++ List.singleton (viewCurrentSquare current)
+                 ++ List.map viewEmptySquare model.remaining
 
                 Found found ->
                     List.map viewEmptySquare model.previous
                  ++ List.singleton (viewFoundSquare found)
-                 ++ List.map viewEmptySquare model.others
+                 ++ List.map viewEmptySquare model.remaining
+
+                NotFound ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.map viewEmptySquare model.remaining
     in
     div [ class "squares" ] squares
 
