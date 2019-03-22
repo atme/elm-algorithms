@@ -2,10 +2,9 @@ module BinarySearch exposing (main)
 
 import Browser
 import Html exposing (Html, div, text, h1, button, h2)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onClick)
 import Random
-import Array exposing (Array)
 import Time
 
 
@@ -18,8 +17,8 @@ main =
         }
 
 
-arrayGenerator : Random.Generator (List Int)
-arrayGenerator = Random.list 10 (Random.int 10 99)
+listGenerator : Random.Generator (List Int)
+listGenerator = Random.list 10 (Random.int 10 99)
 
 
 lookingForGenerator : Random.Generator Int
@@ -30,25 +29,26 @@ lookingForGenerator = Random.int 0 9
 --MODEL
 
 
+type alias Model =
+    { lookingFor : Int
+    , previous : List Int
+    , status : Status
+    , remaining : List Int
+    }
+
+
 type Status
     = Idle
-    | Running Int Int Int
+    | Selected (List Int)
+    | Current (List Int) Int (List Int)
     | Found Int
     | NotFound
-    | Error
-
-
-type alias Model =
-    { array : Array Int
-    , lookingFor : Int
-    , status : Status
-    }
 
 
 init : () -> (Model, Cmd Msg)
 init _ = 
-    ( Model Array.empty 0 Idle
-    , Random.generate NewArray arrayGenerator
+    ( Model 0 [] Idle []
+    , Random.generate NewList listGenerator
     )
 
 
@@ -59,8 +59,9 @@ init _ =
 type Msg 
     = Reset
     | Run
-    | NextStep Time.Posix
-    | NewArray (List Int)
+    | NextSelectedStep (List Int) Time.Posix
+    | NextCurrentStep (List Int) Int (List Int) Time.Posix
+    | NewList (List Int)
     | NewLookingFor Int
 
 
@@ -68,74 +69,80 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         Reset ->
-            ( { model | status = Idle }
-            , Random.generate NewArray arrayGenerator
-            )
+            init ()
 
         Run ->
-            let
-                length =
-                    Array.length model.array - 1
-            in
-            ( { model | status = Running 0 0 length }
+            ( { model | status = Selected model.remaining, remaining = []}
             , Cmd.none
             )
 
-        NextStep _ ->
-            case model.status of
-                Running index last length ->
-                    updateRunningModel index last length model
+        NextSelectedStep list _ ->
+            let
+                index =
+                    List.length list // 2
+            in
+                case List.head ( List.drop index list ) of
+                    Just current ->
+                        (
+                            { model
+                            | status = Current
+                                ( List.take index list )
+                                current
+                                ( List.drop (index + 1) list )
+                            }
+                            , Cmd.none
+                        )
 
-                _ -> 
-                    ( { model | status = Error }
-                    , Cmd.none
-                    )
+                    Nothing ->
+                        (
+                            { model
+                            | status = NotFound
+                            , remaining = list ++ model.remaining
+                            }
+                        , Cmd.none
+                        )
 
-        NewArray list ->
-            ( { model | array = Array.fromList (List.sort list) }
+        NextCurrentStep leftList current rightList _ ->
+            if current == model.lookingFor then
+                (
+                    { model
+                    | previous = model.previous ++ leftList
+                    , status = Found current
+                    , remaining = rightList ++ model.remaining
+                    }
+                , Cmd.none
+                )
+            else if current > model.lookingFor then
+                (
+                    { model
+                    | status = Selected leftList
+                    , remaining = (current :: []) ++ rightList ++ model.remaining
+                    }
+                , Cmd.none
+                )
+            else
+                (
+                    { model
+                    | previous = model.previous ++ leftList ++ (current :: [])
+                    , status = Selected rightList
+                    }
+                , Cmd.none
+                )
+
+        NewList list ->
+            ( { model | remaining = List.sort list }
             , Random.generate NewLookingFor lookingForGenerator
             )
 
         NewLookingFor index ->
-            case Array.get index model.array of
-                Just value ->
-                    ( { model | lookingFor = value }
-                    , Cmd.none
-                    )
-
-                Nothing ->
-                    ( { model | status = Error }
-                    , Cmd.none
-                    )
-
-
-updateRunningModel : Int -> Int -> Int -> Model -> (Model, Cmd Msg)
-updateRunningModel index last length model =
-    case Array.get index model.array of
-        Just value ->
             let
-                newIndexForward =
-                    ceiling <| toFloat (length + index) / 2
-
-                newIndexBackward =
-                    (index - last) // 2 + last
-
-                status =
-                    if value == model.lookingFor then
-                        Found index
-
-                    else if value < model.lookingFor then
-                        Running newIndexForward index length
-
-                    else
-                        Running newIndexBackward last index
+                lookingFor =
+                    model.remaining
+                        |> List.drop index
+                        |> List.head
+                        |> Maybe.withDefault (index * 10)
             in
-            ( { model | status = status }
-            , Cmd.none
-            )
-
-        Nothing ->
-            ( { model | status = NotFound }
+            ( { model | lookingFor = lookingFor }
             , Cmd.none
             )
 
@@ -147,8 +154,12 @@ updateRunningModel index last length model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.status of
-        Running _ _ _ ->
-            Time.every 1000 NextStep
+        Selected list ->
+            Time.every 1000 (NextSelectedStep list)
+
+        Current leftList current rightList ->
+            Time.every 1000 ( NextCurrentStep leftList current rightList )
+
         _ ->
             Sub.none
 
@@ -160,60 +171,83 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     let
-        lookingForText =
-            case model.status of
-                Error ->
-                    "We got some error here :("
-                _ ->
-                    "We are looking for: " ++ String.fromInt model.lookingFor
-
         foundText =
             case model.status of
-                Found index ->
-                    " | The index: " ++ String.fromInt index
+                Found _ ->
+                    " | The index: " ++ String.fromInt (List.length model.previous)
                 NotFound ->
-                    " | Strange, but we've found nothing :o"
+                    " | The value is not in the list"
                 _ ->
                     ""
     in
         div [ class "algorithm" ]
             [ h1 [] [ text "Binary Search" ]
-            , button [ onClick Run ] [ text "Run" ]
+            , button
+                [ onClick Run
+                , disabled (model.status /= Idle)
+                ]
+                [ text "Run" ]
             , button [ onClick Reset ] [ text "Reset" ]
-            , h2 [] [ text (lookingForText ++ foundText) ]
+            , h2 [] [ text ("We are looking for: " ++ String.fromInt model.lookingFor)
+                    , text (foundText)
+                    ]
             , viewSquares model
             ]
 
 
 viewSquares : Model -> Html Msg
-viewSquares model = 
-    div [ class "squares" ]
-        ( model.array
-          |> Array.indexedMap (viewSquare model)
-          |> Array.toList
-        )
-
-
-viewSquare : Model -> Int -> Int -> Html Msg
-viewSquare model index value =
+viewSquares model =
     let
-        additionalClass =
+        squares =
             case model.status of
-                Running current _ _ ->
-                    hasAdditionalClass current "upper"
+                Idle ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.map viewEmptySquare model.remaining
+
+                Selected list ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.map viewSelectedSquare list
+                 ++ List.map viewEmptySquare model.remaining
+
+                Current leftList current rightList ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.map viewSelectedSquare leftList
+                 ++ List.singleton (viewCurrentSquare current)
+                 ++ List.map viewSelectedSquare rightList
+                 ++ List.map viewEmptySquare model.remaining
 
                 Found found ->
-                    hasAdditionalClass found "dark"
+                    List.map viewEmptySquare model.previous
+                 ++ List.singleton (viewFoundSquare found)
+                 ++ List.map viewEmptySquare model.remaining
 
-                _ ->
-                    ""
-
-        hasAdditionalClass selectedIndex name =
-            if index == selectedIndex then
-                name
-            else
-                ""
-
-        stringValue = String.fromInt value
+                NotFound ->
+                    List.map viewEmptySquare model.previous
+                 ++ List.map viewEmptySquare model.remaining
     in
-    div [ class "square", class additionalClass ] [ text stringValue ]
+    div [ class "squares" ] squares
+
+
+viewEmptySquare : Int -> Html Msg
+viewEmptySquare number =
+    viewSquare "" (String.fromInt number)
+
+
+viewCurrentSquare : Int -> Html Msg
+viewCurrentSquare number =
+    viewSquare "upper bright" (String.fromInt number)
+
+
+viewSelectedSquare : Int -> Html Msg
+viewSelectedSquare number =
+    viewSquare "bright" (String.fromInt number)
+
+
+viewFoundSquare : Int -> Html Msg
+viewFoundSquare number =
+    viewSquare "dark" (String.fromInt number)
+
+
+viewSquare : String -> String -> Html Msg
+viewSquare additionalClass value =
+    div [ class "square", class additionalClass ] [ text value ]
