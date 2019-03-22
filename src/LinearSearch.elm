@@ -131,8 +131,7 @@ update msg model =
             let
                 lookingFor =
                     model.remaining
-                        |> List.take index
-                        |> List.reverse
+                        |> List.drop index
                         |> List.head
                         |> Maybe.withDefault (index * 10)
             in
