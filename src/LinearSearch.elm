@@ -217,12 +217,12 @@ viewEmptySquare number =
 
 viewCurrentSquare : Int -> Html Msg
 viewCurrentSquare number =
-    viewSquare "current" (String.fromInt number)
+    viewSquare "upper" (String.fromInt number)
 
 
 viewFoundSquare : Int -> Html Msg
 viewFoundSquare number =
-    viewSquare "found" (String.fromInt number)
+    viewSquare "dark" (String.fromInt number)
 
 viewSquare : String -> String -> Html Msg
 viewSquare additionalClass value =

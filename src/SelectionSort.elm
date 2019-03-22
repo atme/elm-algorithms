@@ -230,7 +230,7 @@ viewSquares model =
                             []
 
                 squares =
-                    List.map viewEmptySquare running.sorted
+                    List.map viewSortedSquare running.sorted
                  ++ List.map viewEmptySquare running.previous
                  ++ List.singleton (viewFoundSquare running.selected)
                  ++ List.map viewEmptySquare running.middle
@@ -245,14 +245,19 @@ viewEmptySquare number =
     viewSquare "" (String.fromInt number)
 
 
+viewSortedSquare : Int -> Html Msg
+viewSortedSquare number =
+    viewSquare "bright" (String.fromInt number)
+
+
 viewCurrentSquare : Int -> Html Msg
 viewCurrentSquare number =
-    viewSquare "current" (String.fromInt number)
+    viewSquare "upper" (String.fromInt number)
 
 
 viewFoundSquare : Int -> Html Msg
 viewFoundSquare number =
-    viewSquare "found" (String.fromInt number)
+    viewSquare "dark" (String.fromInt number)
 
 viewSquare : String -> String -> Html Msg
 viewSquare additionalClass value =

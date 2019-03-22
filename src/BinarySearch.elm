@@ -200,10 +200,10 @@ viewSquare model index value =
         additionalClass =
             case model.status of
                 Running current _ _ ->
-                    hasAdditionalClass current "current"
+                    hasAdditionalClass current "upper"
 
                 Found found ->
-                    hasAdditionalClass found "found"
+                    hasAdditionalClass found "dark"
 
                 _ ->
                     ""
