@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Sorting Algorithms</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100" rel="stylesheet"> 
+  <link rel="stylesheet" href="index.css">
+  <script src="elm.min.js"></script>
+</head>
+
+<body>
+  <div class="sidebar">
+    <ul>
+      <li><a href="index.html">Search Algorithms</a></li>
+      <li>Sorting Algorithms -></li>
+    </ul>
+  </div>
+  <div class="page">
+    <div id="selectionSort"></div>
+    <div id="insertionSort"></div>
+  </div>
+  <script>
+    var selectionSort = Elm.SelectionSort.init({
+      node: document.getElementById('selectionSort')
+    });
+    var insertionSort = Elm.InsertionSort.init({
+      node: document.getElementById('insertionSort')
+    });
+  </script>
+</body>
+</html>

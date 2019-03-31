@@ -2,29 +2,29 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Algorithms</title>
+  <title>Search Algorithms</title>
   <link href="https://fonts.googleapis.com/css?family=Roboto:100" rel="stylesheet"> 
   <link rel="stylesheet" href="index.css">
   <script src="elm.min.js"></script>
 </head>
 
 <body>
-  <div id="linearSearch"></div>
-  <div id="binarySearch"></div>
-  <div id="selectionSort"></div>
-  <div id="insertionSort"></div>
+  <div class="sidebar">
+    <ul>
+      <li>Search Algorithms -></li>
+      <li><a href="sort.html">Sorting Algorithms</a></li>
+    </ul>
+  </div>
+  <div class="page">
+    <div id="linearSearch"></div>
+    <div id="binarySearch"></div>
+  </div>
   <script>
     var linearSearch = Elm.LinearSearch.init({
       node: document.getElementById('linearSearch')
     });
     var binarySearch = Elm.BinarySearch.init({
       node: document.getElementById('binarySearch')
-    });
-    var selectionSort = Elm.SelectionSort.init({
-      node: document.getElementById('selectionSort')
-    });
-    var insertionSort = Elm.InsertionSort.init({
-      node: document.getElementById('insertionSort')
     });
   </script>
 </body>
