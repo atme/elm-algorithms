@@ -1,7 +1,7 @@
 module BinarySearch exposing (main)
 
 import Browser
-import Html exposing (Html, div, text, h1, button, h2)
+import Html exposing (..)
 import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onClick)
 import Random
@@ -192,6 +192,11 @@ view model =
                     , text (foundText)
                     ]
             , viewSquares model
+            , ul []
+                [ li [] [ text ("+ Fast: O(log n)") ]
+                , li [] [ text (" - A little harder to implement") ]
+                , li [] [ text (" - Uneffective with a linked list") ]
+                ]
             ]
 
 

@@ -1,7 +1,7 @@
 module LinearSearch exposing (main)
 
 import Browser
-import Html exposing (Html, div, text, h1, button, h2)
+import Html exposing (..)
 import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onClick)
 import Random
@@ -181,6 +181,13 @@ view model =
                     , text (foundText)
                     ]
             , viewSquares model
+
+            -- Pro and Contra --
+            , ul []
+                [ li [] [ text ("+ Simple to implement") ]
+                , li [] [ text ("+ Can work with an unsorted array") ]
+                , li [] [ text ("- Slow: O(n)") ]
+                ]
             ]
 
 

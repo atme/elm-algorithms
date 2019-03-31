@@ -46,6 +46,11 @@ body {
     margin-bottom: 50px;
 }
 
+.algorithm ul {
+    list-style-type: none;
+    padding: 0;
+}
+
 .squares {
     display: flex;
     font-weight: bold;
