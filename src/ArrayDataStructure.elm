@@ -125,12 +125,13 @@ view model =
     in
     div [ class "algorithm" ]
         [ h1 [] [ text "Array" ]
-        , div [ class "inline-input"]
-            [ text ("Get index ")
+        , h2 []
+            [ text ("Get index:")
             , input
                 [ onInput ChangeIndex
                 , value index
                 , maxlength 1
+                , class "inline-input"
                 ] []
         ]
         , viewSquares model
