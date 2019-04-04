@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Sorting Algorithms</title>
+  <title>Data Structures</title>
   <link href="https://fonts.googleapis.com/css?family=Roboto:100" rel="stylesheet"> 
   <link rel="stylesheet" href="index.css">
   <script src="elm.min.js"></script>
@@ -12,20 +12,16 @@
   <div class="sidebar">
     <ul>
       <li><a href="index.html">Search Algorithms</a></li>
-      <li>Sorting Algorithms -></li>
-      <li><a href="datastructure.html">Data Structures</a></li>
+      <li><a href="sort.html">Sorting Algorithms</a></li>
+      <li>Data Structures -></li>
     </ul>
   </div>
   <div class="page">
-    <div id="selectionSort"></div>
-    <div id="insertionSort"></div>
+    <div id="arrayDS"></div>
   </div>
   <script>
-    var selectionSort = Elm.SelectionSort.init({
-      node: document.getElementById('selectionSort')
-    });
-    var insertionSort = Elm.InsertionSort.init({
-      node: document.getElementById('insertionSort')
+    var arrayDS = Elm.ArrayDataStructure.init({
+      node: document.getElementById('arrayDS')
     });
   </script>
 </body>
