@@ -1,4 +1,12 @@
-module LinearSearch exposing (main)
+module LinearSearch exposing 
+    ( Model
+    , initModel
+    , initCmd
+    , Msg
+    , update
+    , subscriptions
+    , view
+    )
 
 import Browser
 import Html exposing (..)
@@ -8,9 +16,9 @@ import Random
 import Time
 
 
-main = 
+main =
     Browser.element
-        { init = init
+        { init = \() -> resetModel
         , update = update
         , subscriptions = subscriptions
         , view = view
@@ -46,15 +54,19 @@ type Status
     | NotFound
 
 
+initCmd : Cmd Msg
+initCmd = Random.generate NewList listGenerator
+
+
 resetModel : (Model, Cmd Msg)
 resetModel =
-    ( Model 0 [] Idle []
-    , Random.generate NewList listGenerator
+    ( initModel
+    , initCmd
     )
 
 
-init : () -> (Model, Cmd Msg)
-init _ = resetModel
+initModel : Model
+initModel = Model 0 [] Idle []
 
 
 

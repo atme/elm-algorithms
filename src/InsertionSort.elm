@@ -1,16 +1,24 @@
-module InsertionSort exposing (main)
+module InsertionSort exposing
+    ( Model
+    , Msg
+    , initCmd
+    , initModel
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser
-import Html exposing (Html, div, text, h1, button, h2)
+import Html exposing (Html, button, div, h1, h2, text)
 import Html.Attributes exposing (class, disabled)
 import Html.Events exposing (onClick)
 import Random
 import Time
 
 
-main = 
+main =
     Browser.element
-        { init = init
+        { init = \() -> ( initModel, initCmd )
         , update = update
         , subscriptions = subscriptions
         , view = view
@@ -18,7 +26,8 @@ main =
 
 
 listGenerator : Random.Generator (List Int)
-listGenerator = Random.list 10 (Random.int 10 99)
+listGenerator =
+    Random.list 10 (Random.int 10 99)
 
 
 
@@ -32,11 +41,14 @@ type Model
     | Sorted (List Int)
 
 
-init : () -> (Model, Cmd Msg)
-init _ =
-    ( Idle []
-    , Random.generate NewList listGenerator
-    )
+initModel : Model
+initModel =
+    Idle []
+
+
+initCmd : Cmd Msg
+initCmd =
+    Random.generate NewList listGenerator
 
 
 
@@ -51,11 +63,11 @@ type Msg
     | NewList (List Int)
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            init ()
+            ( initModel, initCmd )
 
         Run list ->
             ( NewLoop [] list
@@ -79,26 +91,27 @@ update msg model =
                 Just number ->
                     if number > current then
                         ( SortValue
-                            ( remaining
+                            (remaining
                                 |> List.reverse
                                 |> List.drop 1
                                 |> List.reverse
                             )
                             current
-                            ( (number :: []) ++ previous )
+                            ((number :: []) ++ previous)
                             unsorted
                         , Cmd.none
                         )
+
                     else
                         ( NewLoop
-                            ( remaining ++ (current :: []) ++ previous )
+                            (remaining ++ (current :: []) ++ previous)
                             unsorted
                         , Cmd.none
                         )
 
                 Nothing ->
                     ( NewLoop
-                        ( (current :: []) ++ previous )
+                        ((current :: []) ++ previous)
                         unsorted
                     , Cmd.none
                     )
@@ -107,7 +120,6 @@ update msg model =
             ( Idle list
             , Cmd.none
             )
-
 
 
 
@@ -138,6 +150,7 @@ view model =
             case model of
                 Idle list ->
                     [ onClick (Run list) ]
+
                 _ ->
                     [ disabled True ]
     in
@@ -160,13 +173,13 @@ viewSquares model =
 
                 NewLoop sorted unsorted ->
                     List.map viewSortedSquare sorted
-                 ++ List.map viewEmptySquare unsorted
+                        ++ List.map viewEmptySquare unsorted
 
                 SortValue remaining current previous unsorted ->
                     List.map viewSortedSquare remaining
-                 ++ List.singleton (viewCurrentSquare current)
-                 ++ List.map viewSortedSquare previous
-                 ++ List.map viewEmptySquare unsorted
+                        ++ List.singleton (viewCurrentSquare current)
+                        ++ List.map viewSortedSquare previous
+                        ++ List.map viewEmptySquare unsorted
 
                 Sorted list ->
                     List.map viewEmptySquare list
@@ -192,6 +205,7 @@ viewCurrentSquare number =
 viewFoundSquare : Int -> Html Msg
 viewFoundSquare number =
     viewSquare "dark" (String.fromInt number)
+
 
 viewSquare : String -> String -> Html Msg
 viewSquare additionalClass value =

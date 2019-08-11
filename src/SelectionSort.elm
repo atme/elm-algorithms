@@ -1,16 +1,24 @@
-module SelectionSort exposing (main)
+module SelectionSort exposing
+    ( Model
+    , Msg
+    , initCmd
+    , initModel
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser
-import Html exposing (Html, div, text, h1, button, h2)
+import Html exposing (Html, button, div, h1, h2, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Random
 import Time
 
 
-main = 
+main =
     Browser.element
-        { init = init
+        { init = \() -> ( initModel, initCmd )
         , update = update
         , subscriptions = subscriptions
         , view = view
@@ -18,7 +26,8 @@ main =
 
 
 listGenerator : Random.Generator (List Int)
-listGenerator = Random.list 10 (Random.int 10 99)
+listGenerator =
+    Random.list 10 (Random.int 10 99)
 
 
 
@@ -39,66 +48,61 @@ type alias RunningAlias =
     , remaining : List Int
     }
 
-init : () -> (Model, Cmd Msg)
-init _ =
-    ( Idle []
-    , Random.generate NewList listGenerator
-    )
+
+initModel : Model
+initModel =
+    Idle []
+
+
+initCmd : Cmd Msg
+initCmd =
+    Random.generate NewList listGenerator
 
 
 
 -- UPDATE
 
 
-type Msg 
+type Msg
     = Reset
     | Run
     | NextStep RunningAlias Time.Posix
     | NewList (List Int)
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            ( model
-            , Random.generate NewList listGenerator
-            )
+            ( model, initCmd )
 
         Run ->
             case model of
                 Idle list ->
-                    ( initRun list
-                    , Cmd.none
-                    )
+                    ( initRun list, Cmd.none )
 
                 Running _ ->
-                    ( model
-                    , Cmd.none
-                    )
+                    ( model, Cmd.none )
 
         NextStep running newTime ->
-            ( nextCurrent (switchSelect running)
-            , Cmd.none
-            )
+            ( nextCurrent (switchSelect running), Cmd.none )
 
         NewList list ->
-            ( Idle list
-            , Cmd.none
-            )
+            ( Idle list, Cmd.none )
 
 
 initRun : List Int -> Model
 initRun list =
     case List.head list of
         Just selected ->
-            Running <| RunningAlias
-                []
-                []
-                selected
-                []
-                Nothing
-                (List.drop 1 list)
+            Running <|
+                RunningAlias
+                    []
+                    []
+                    selected
+                    []
+                    Nothing
+                    (List.drop 1 list)
 
         Nothing ->
             Idle list
@@ -110,12 +114,14 @@ switchSelect running =
         Just current ->
             if running.selected > current then
                 { running
-                | previous = running.previous
-                        ++ ( running.selected :: running.middle )
-                , selected = current
-                , middle = []
-                , current = Nothing
+                    | previous =
+                        running.previous
+                            ++ (running.selected :: running.middle)
+                    , selected = current
+                    , middle = []
+                    , current = Nothing
                 }
+
             else
                 running
 
@@ -129,9 +135,9 @@ nextCurrent running =
         Just number ->
             Running
                 { running
-                | middle = running.middle ++ toList running.current
-                , current = Just number
-                , remaining = List.drop 1 running.remaining
+                    | middle = running.middle ++ toList running.current
+                    , current = Just number
+                    , remaining = List.drop 1 running.remaining
                 }
 
         Nothing ->
@@ -145,33 +151,34 @@ nextLoop running =
             case running.current of
                 Just number ->
                     number :: []
-                
+
                 Nothing ->
                     []
 
         remaining =
-            (List.drop 1 running.previous) 
-         ++ (List.take 1 running.previous)
-         ++ running.middle
-         ++ current
-         ++ running.remaining
+            List.drop 1 running.previous
+                ++ List.take 1 running.previous
+                ++ running.middle
+                ++ current
+                ++ running.remaining
 
-        sorted = running.sorted ++ List.singleton running.selected
+        sorted =
+            running.sorted ++ List.singleton running.selected
     in
-        case List.head remaining of
-            Just selected ->
-                Running
-                    { running
+    case List.head remaining of
+        Just selected ->
+            Running
+                { running
                     | sorted = sorted
                     , previous = []
                     , selected = selected
                     , middle = []
                     , current = Nothing
                     , remaining = List.drop 1 remaining
-                    }
+                }
 
-            Nothing ->
-                Idle sorted
+        Nothing ->
+            Idle sorted
 
 
 toList : Maybe a -> List a
@@ -185,7 +192,6 @@ toList maybeValue =
 
 
 
-
 -- SUBSCRIPTIONS
 
 
@@ -194,6 +200,7 @@ subscriptions model =
     case model of
         Running running ->
             Time.every 1000 (NextStep running)
+
         _ ->
             Sub.none
 
@@ -225,17 +232,17 @@ viewSquares model =
                     case running.current of
                         Just number ->
                             List.singleton (viewCurrentSquare number)
-                        
+
                         Nothing ->
                             []
 
                 squares =
                     List.map viewSortedSquare running.sorted
-                 ++ List.map viewEmptySquare running.previous
-                 ++ List.singleton (viewFoundSquare running.selected)
-                 ++ List.map viewEmptySquare running.middle
-                 ++ current
-                 ++ List.map viewEmptySquare running.remaining
+                        ++ List.map viewEmptySquare running.previous
+                        ++ List.singleton (viewFoundSquare running.selected)
+                        ++ List.map viewEmptySquare running.middle
+                        ++ current
+                        ++ List.map viewEmptySquare running.remaining
             in
             div [ class "squares" ] squares
 
@@ -258,6 +265,7 @@ viewCurrentSquare number =
 viewFoundSquare : Int -> Html Msg
 viewFoundSquare number =
     viewSquare "dark" (String.fromInt number)
+
 
 viewSquare : String -> String -> Html Msg
 viewSquare additionalClass value =

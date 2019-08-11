@@ -1,4 +1,12 @@
-module BinarySearch exposing (main)
+module BinarySearch exposing
+    ( Model
+    , Msg
+    , initCmd
+    , initModel
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser
 import Html exposing (..)
@@ -8,9 +16,9 @@ import Random
 import Time
 
 
-main = 
+main =
     Browser.element
-        { init = init
+        { init = \() -> ( initModel, initCmd )
         , update = update
         , subscriptions = subscriptions
         , view = view
@@ -18,11 +26,13 @@ main =
 
 
 listGenerator : Random.Generator (List Int)
-listGenerator = Random.list 10 (Random.int 10 99)
+listGenerator =
+    Random.list 10 (Random.int 10 99)
 
 
 lookingForGenerator : Random.Generator Int
-lookingForGenerator = Random.int 0 9
+lookingForGenerator =
+    Random.int 0 9
 
 
 
@@ -45,18 +55,21 @@ type Status
     | NotFound
 
 
-init : () -> (Model, Cmd Msg)
-init _ = 
-    ( Model 0 [] Idle []
-    , Random.generate NewList listGenerator
-    )
+initModel : Model
+initModel =
+    Model 0 [] Idle []
+
+
+initCmd : Cmd Msg
+initCmd =
+    Random.generate NewList listGenerator
 
 
 
 -- UPDATE
 
 
-type Msg 
+type Msg
     = Reset
     | Run
     | NextSelectedStep (List Int) Time.Posix
@@ -65,14 +78,14 @@ type Msg
     | NewLookingFor Int
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            init ()
+            ( initModel, initCmd )
 
         Run ->
-            ( { model | status = Selected model.remaining, remaining = []}
+            ( { model | status = Selected model.remaining, remaining = [] }
             , Cmd.none
             )
 
@@ -81,51 +94,49 @@ update msg model =
                 index =
                     List.length list // 2
             in
-                case List.head ( List.drop index list ) of
-                    Just current ->
-                        (
-                            { model
-                            | status = Current
-                                ( List.take index list )
+            case List.head (List.drop index list) of
+                Just current ->
+                    ( { model
+                        | status =
+                            Current
+                                (List.take index list)
                                 current
-                                ( List.drop (index + 1) list )
-                            }
-                            , Cmd.none
-                        )
+                                (List.drop (index + 1) list)
+                      }
+                    , Cmd.none
+                    )
 
-                    Nothing ->
-                        (
-                            { model
-                            | status = NotFound
-                            , remaining = list ++ model.remaining
-                            }
-                        , Cmd.none
-                        )
+                Nothing ->
+                    ( { model
+                        | status = NotFound
+                        , remaining = list ++ model.remaining
+                      }
+                    , Cmd.none
+                    )
 
         NextCurrentStep leftList current rightList _ ->
             if current == model.lookingFor then
-                (
-                    { model
+                ( { model
                     | previous = model.previous ++ leftList
                     , status = Found current
                     , remaining = rightList ++ model.remaining
-                    }
+                  }
                 , Cmd.none
                 )
+
             else if current > model.lookingFor then
-                (
-                    { model
+                ( { model
                     | status = Selected leftList
                     , remaining = (current :: []) ++ rightList ++ model.remaining
-                    }
+                  }
                 , Cmd.none
                 )
+
             else
-                (
-                    { model
+                ( { model
                     | previous = model.previous ++ leftList ++ (current :: [])
                     , status = Selected rightList
-                    }
+                  }
                 , Cmd.none
                 )
 
@@ -158,7 +169,7 @@ subscriptions model =
             Time.every 1000 (NextSelectedStep list)
 
         Current leftList current rightList ->
-            Time.every 1000 ( NextCurrentStep leftList current rightList )
+            Time.every 1000 (NextCurrentStep leftList current rightList)
 
         _ ->
             Sub.none
@@ -175,29 +186,32 @@ view model =
             case model.status of
                 Found _ ->
                     " | The index: " ++ String.fromInt (List.length model.previous)
+
                 NotFound ->
                     " | The value is not in the list"
+
                 _ ->
                     ""
     in
-        div [ class "algorithm" ]
-            [ h1 [] [ text "Binary Search" ]
-            , button
-                [ onClick Run
-                , disabled (model.status /= Idle)
-                ]
-                [ text "Run" ]
-            , button [ onClick Reset ] [ text "Reset" ]
-            , h2 [] [ text ("We are looking for: " ++ String.fromInt model.lookingFor)
-                    , text (foundText)
-                    ]
-            , viewSquares model
-            , ul []
-                [ li [] [ text ("+ Fast: O(log n)") ]
-                , li [] [ text (" - A little harder to implement") ]
-                , li [] [ text (" - Uneffective with a linked list") ]
-                ]
+    div [ class "algorithm" ]
+        [ h1 [] [ text "Binary Search" ]
+        , button
+            [ onClick Run
+            , disabled (model.status /= Idle)
             ]
+            [ text "Run" ]
+        , button [ onClick Reset ] [ text "Reset" ]
+        , h2 []
+            [ text ("We are looking for: " ++ String.fromInt model.lookingFor)
+            , text foundText
+            ]
+        , viewSquares model
+        , ul []
+            [ li [] [ text "+ Fast: O(log n)" ]
+            , li [] [ text " - A little harder to implement" ]
+            , li [] [ text " - Uneffective with a linked list" ]
+            ]
+        ]
 
 
 viewSquares : Model -> Html Msg
@@ -207,28 +221,28 @@ viewSquares model =
             case model.status of
                 Idle ->
                     List.map viewEmptySquare model.previous
-                 ++ List.map viewEmptySquare model.remaining
+                        ++ List.map viewEmptySquare model.remaining
 
                 Selected list ->
                     List.map viewEmptySquare model.previous
-                 ++ List.map viewSelectedSquare list
-                 ++ List.map viewEmptySquare model.remaining
+                        ++ List.map viewSelectedSquare list
+                        ++ List.map viewEmptySquare model.remaining
 
                 Current leftList current rightList ->
                     List.map viewEmptySquare model.previous
-                 ++ List.map viewSelectedSquare leftList
-                 ++ List.singleton (viewCurrentSquare current)
-                 ++ List.map viewSelectedSquare rightList
-                 ++ List.map viewEmptySquare model.remaining
+                        ++ List.map viewSelectedSquare leftList
+                        ++ List.singleton (viewCurrentSquare current)
+                        ++ List.map viewSelectedSquare rightList
+                        ++ List.map viewEmptySquare model.remaining
 
                 Found found ->
                     List.map viewEmptySquare model.previous
-                 ++ List.singleton (viewFoundSquare found)
-                 ++ List.map viewEmptySquare model.remaining
+                        ++ List.singleton (viewFoundSquare found)
+                        ++ List.map viewEmptySquare model.remaining
 
                 NotFound ->
                     List.map viewEmptySquare model.previous
-                 ++ List.map viewEmptySquare model.remaining
+                        ++ List.map viewEmptySquare model.remaining
     in
     div [ class "squares" ] squares
 
